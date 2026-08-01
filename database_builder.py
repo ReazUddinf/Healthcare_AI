@@ -1,7 +1,8 @@
 import os
+import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, Column, Integer, String, Float, MetaData
+from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.orm import declarative_base
 
 # Load environment variables
@@ -17,16 +18,15 @@ DB_NAME = os.getenv("DB_NAME")
 engine = create_engine(f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
 Base = declarative_base()
 
-# 1. Define the Patients Table
+# 1. Define Patients Table
 class Patient(Base):
     __tablename__ = 'patients'
     patient_nbr = Column(Integer, primary_key=True)
     race = Column(String)
     gender = Column(String)
     age = Column(String)
-    weight = Column(String)
 
-# 2. Define the Admissions Table
+# 2. Define Admissions Table
 class Admission(Base):
     __tablename__ = 'admissions'
     encounter_id = Column(Integer, primary_key=True)
@@ -36,29 +36,62 @@ class Admission(Base):
     admission_source_id = Column(Integer)
     time_in_hospital = Column(Integer)
 
+# 3. Define Diagnoses Table
+class Diagnosis(Base):
+    __tablename__ = 'diagnoses'
+    encounter_id = Column(Integer, primary_key=True)
+    diag_1 = Column(String)
+    diag_2 = Column(String)
+    diag_3 = Column(String)
+    number_diagnoses = Column(Integer)
+
+# 4. Define Medications Table
+class Medication(Base):
+    __tablename__ = 'medications'
+    encounter_id = Column(Integer, primary_key=True)
+    num_medications = Column(Integer)
+    diabetesMed = Column(String)
+    change = Column(String)
+    insulin = Column(String)
+
+# 5. Define Lab Tests Table
+class LabTest(Base):
+    __tablename__ = 'lab_tests'
+    encounter_id = Column(Integer, primary_key=True)
+    num_lab_procedures = Column(Integer)
+    max_glu_serum = Column(String)
+    A1Cresult = Column(String)
+
 if __name__ == "__main__":
     print("Connecting to the database...")
-    # 1. Create tables 
+    Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
-    print("Tables verified!")
+    print("All 5 tables reset and verified!")
 
-    # 2. Extract: Read the raw CSV
+    # Extract
     print("Reading raw CSV file...")
     df = pd.read_csv('raw_data/diabetic_data.csv') 
 
-    # 3. Transform: Separate into Patients and Admissions
-    print("Transforming data...")
-    # Get unique patients by dropping duplicate patient numbers
-    patients_df = df[['patient_nbr', 'race', 'gender', 'age', 'weight']].drop_duplicates(subset=['patient_nbr'])
-    
-    # Get all admission records
+    # Clean
+    print("Cleaning missing values and dropping dead columns...")
+    df.replace('?', np.nan, inplace=True)
+    columns_to_drop = ['weight', 'payer_code', 'medical_specialty']
+    df.drop(columns=columns_to_drop, inplace=True, errors='ignore')
+
+    # Transform
+    print("Transforming data into relational schemas...")
+    patients_df = df[['patient_nbr', 'race', 'gender', 'age']].drop_duplicates(subset=['patient_nbr'])
     admissions_df = df[['encounter_id', 'patient_nbr', 'admission_type_id', 'discharge_disposition_id', 'admission_source_id', 'time_in_hospital']]
+    diagnoses_df = df[['encounter_id', 'diag_1', 'diag_2', 'diag_3', 'number_diagnoses']]
+    medications_df = df[['encounter_id', 'num_medications', 'diabetesMed', 'change', 'insulin']]
+    lab_tests_df = df[['encounter_id', 'num_lab_procedures', 'max_glu_serum', 'A1Cresult']]
 
-    # 4. Load: Insert the data into PostgreSQL
-    print(f"Loading {len(patients_df)} unique patients into the database...")
+    # Load
+    print("Loading data into PostgreSQL (This might take a minute)...")
     patients_df.to_sql('patients', engine, if_exists='append', index=False)
-
-    print(f"Loading {len(admissions_df)} admissions into the database...")
     admissions_df.to_sql('admissions', engine, if_exists='append', index=False)
+    diagnoses_df.to_sql('diagnoses', engine, if_exists='append', index=False)
+    medications_df.to_sql('medications', engine, if_exists='append', index=False)
+    lab_tests_df.to_sql('lab_tests', engine, if_exists='append', index=False)
 
-    print("ETL Pipeline completed successfully! Data is now in PostgreSQL.")
+    print("ETL Pipeline completed successfully! Full database is populated.")
