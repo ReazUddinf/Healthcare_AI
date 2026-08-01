@@ -30,7 +30,7 @@ class Patient(Base):
 class Admission(Base):
     __tablename__ = 'admissions'
     encounter_id = Column(Integer, primary_key=True)
-    patient_nbr = Column(Integer) # Foreign key logic will be applied later
+    patient_nbr = Column(Integer) 
     admission_type_id = Column(Integer)
     discharge_disposition_id = Column(Integer)
     admission_source_id = Column(Integer)
@@ -38,6 +38,27 @@ class Admission(Base):
 
 if __name__ == "__main__":
     print("Connecting to the database...")
-    # This command creates the empty tables in pgAdmin
+    # 1. Create tables 
     Base.metadata.create_all(engine)
-    print("Tables created successfully!")
+    print("Tables verified!")
+
+    # 2. Extract: Read the raw CSV
+    print("Reading raw CSV file...")
+    df = pd.read_csv('raw_data/diabetic_data.csv') 
+
+    # 3. Transform: Separate into Patients and Admissions
+    print("Transforming data...")
+    # Get unique patients by dropping duplicate patient numbers
+    patients_df = df[['patient_nbr', 'race', 'gender', 'age', 'weight']].drop_duplicates(subset=['patient_nbr'])
+    
+    # Get all admission records
+    admissions_df = df[['encounter_id', 'patient_nbr', 'admission_type_id', 'discharge_disposition_id', 'admission_source_id', 'time_in_hospital']]
+
+    # 4. Load: Insert the data into PostgreSQL
+    print(f"Loading {len(patients_df)} unique patients into the database...")
+    patients_df.to_sql('patients', engine, if_exists='append', index=False)
+
+    print(f"Loading {len(admissions_df)} admissions into the database...")
+    admissions_df.to_sql('admissions', engine, if_exists='append', index=False)
+
+    print("ETL Pipeline completed successfully! Data is now in PostgreSQL.")
