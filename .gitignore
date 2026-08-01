@@ -1,0 +1,23 @@
+# Environments
+venv/
+env/
+__pycache__/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Data files (Never push raw or processed data to GitHub)
+*.csv
+*.xlsx
+*.json
+raw_data/
+processed_data/
+
+# Model files
+*.pkl
+*.h5
+*.joblib
+models/
+
+# Environment variables (for passwords/keys later)
+.env
