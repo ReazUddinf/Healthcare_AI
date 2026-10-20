@@ -32,3 +32,13 @@ This reads the CSV and writes an aggregate Markdown report. **It never connects 
 ## Security and reproducibility
 
 Keep `.env`, database credentials, `venv/`, model weights, datasets, raw encounter logs, and reports containing row-level data off GitHub. Review staged diffs before each commit. Use patient-grouped splits and define the prediction moment before building risk models.
+
+
+## Development progress
+
+- Milestone 0: Dataset audit completed.
+- Milestone 1: PostgreSQL migration, ETL backfill, integrity
+  checks and idempotency testing completed.
+- Milestone 2: Prediction cohort and feature engineering — next.
+
+See [Milestone 1 Report](docs/MILESTONE_1_REPORT.md).
